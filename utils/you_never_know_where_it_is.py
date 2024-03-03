@@ -6,6 +6,9 @@ from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.model_selection import RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV
+import numpy as np
 
 
 # a helper function to examine the numerical features
@@ -328,3 +331,138 @@ class PerformanceMetrics:
         print(f'Recall: {self.recall:.4f}')
         print(f'ROC AUC: {self.roc_auc:.4f}')
         print(f'F1 Score: {self.f_1:.4f}')
+        
+# create a function to store peformance metrics in a table
+def create_metrics_dataframe(performance_metrics, index_name):
+    data = {
+        'accuracy': [performance_metrics.accuracy],
+        'precision': [performance_metrics.precision],
+        'recall': [performance_metrics.recall],
+        'roc_auc': [performance_metrics.roc_auc],
+        'f1_score': [performance_metrics.f_1]
+    }
+    df = pd.DataFrame(data)
+    df.index = [index_name]
+    return df
+
+# function for model tuning 
+
+## Random Forest random search
+def tune_rf_rs(rf_pipeline, X_train, y_train):
+    # Number of trees in random forest
+    n_estimators = [int(x) for x in np.linspace(start = 100, stop = 1000, num = 10)]
+
+    max_features = ['auto', 'sqrt', 'log2']
+
+    max_depth = max_depth = [int(x) for x in np.linspace(5, 120, num=12)]
+
+    min_samples_split = [10, 15, 20, 30, 50]
+
+    min_samples_leaf = [5, 10, 15]
+
+    bootstrap = [True, False]
+
+    # Create the random grid
+    random_grid = {'classifier__n_estimators': n_estimators,
+                   'classifier__max_features': max_features,
+                   'classifier__max_depth': max_depth,
+                   'classifier__min_samples_split': min_samples_split,
+                   'classifier__min_samples_leaf': min_samples_leaf,
+                   'classifier__bootstrap': bootstrap}
+
+    # Use the random grid to search for best hyperparameters
+    random_search_rf = RandomizedSearchCV(estimator=rf_pipeline, 
+                                            param_distributions=random_grid, 
+                                            n_iter=15, cv=3, 
+                                            verbose=2, random_state=42, n_jobs=-1)
+        # Fit the random search model
+    random_search_rf.fit(X_train, y_train)
+
+    # Get the best parameters
+    best_params = random_search_rf.best_params_
+
+    return best_params
+
+## Random Forest grid search (define the search space after the random search results)
+def tune_rf_gs(rf_pipeline, X_train, y_train):
+
+    # Create the grid
+    grid_search_space = {'classifier__n_estimators': [900, 1000, 1100],
+                   'classifier__max_features': ['sqrt'],
+                   'classifier__max_depth': [32, 36, 40],
+                   'classifier__min_samples_split': [50, 60],
+                   'classifier__min_samples_leaf': [5, 8],
+                   'classifier__bootstrap': [False]}
+    # Use the grid to search for best hyperparameters
+    grid_search_rf = GridSearchCV(estimator = rf_pipeline, param_grid = grid_search_space, cv = 3, verbose=2, n_jobs = -1)
+
+    # Fit the grid search model
+    grid_search_rf.fit(X_train, y_train)
+
+    # Get the best parameters
+    best_params = grid_search_rf.best_params_
+
+    return best_params
+
+## XGBoost random search 
+
+def tune_xgb_rs(xgb_pipeline, x, y):
+    # Define the hyperparameter grid
+    xgb_grid = {
+        'classifier__n_estimators': [100, 200, 500, 1000],
+        'classifier__learning_rate': [0.01, 0.05, 0.1],
+        'classifier__max_depth': [3, 5, 7, 10],
+        'classifier__min_child_weight': [1, 5, 10],
+        'classifier__gamma': [0.5, 1, 1.5, 2],
+        'classifier__subsample': [0.6, 0.8, 1.0],
+        'classifier__colsample_bytree': [0.6, 0.8, 1.0],
+        'classifier__reg_alpha': [0, 0.001, 0.005, 0.01, 0.05],
+        'classifier__reg_lambda': [0.1, 1.0, 5.0, 10.0, 50.0, 100.0]
+    }
+
+    random_search_xgb = RandomizedSearchCV(
+        estimator=xgb_pipeline, 
+        param_distributions=xgb_grid, 
+        n_iter=30,  
+        cv=3, 
+        verbose=2, 
+        random_state=6701, 
+        n_jobs=-1, 
+        scoring='roc_auc'
+    )
+
+    # Fit the random search model
+    random_search_xgb.fit(x, y)
+
+    # Get the best parameters
+    best_params = random_search_xgb.best_params_
+
+    return best_params
+
+## XGBoost grid search (define the search space after the random search results)
+
+def tune_xgb_gs(xgb_pipeline, X_resampled, y_resampled):
+    # Create the grid
+    xgb_grid = {
+    'classifier__n_estimators': [950, 1000,1050],
+    'classifier__learning_rate': [ 0.01, 0.001],
+    'classifier__max_depth': [10, 12],
+    'classifier__min_child_weight': [5, 7],
+    'classifier__gamma': [2, 3],
+    'classifier__subsample': [0.6, 0.65],
+    'classifier__colsample_bytree': [0.8, 0.85],
+    'classifier__reg_alpha': [0, 0.0001],
+    'classifier__reg_lambda': [1, 1.5]
+    }
+
+    # Use the grid to search for best hyperparameters
+    grid_search_xgb = GridSearchCV(estimator = xgb_pipeline, param_grid = xgb_grid, cv = 3, verbose=2, n_jobs = -1, scoring='roc_auc')
+
+    # Fit the grid search model
+    grid_search_xgb.fit(X_resampled, y_resampled)
+
+    # Get the best parameters
+    best_params = grid_search_xgb.best_params_
+
+    return best_params
+

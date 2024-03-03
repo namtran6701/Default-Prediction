@@ -37,4 +37,4 @@ issue_d - convert to number of months from issue date to the date of loan applic
 
 desc - convert desc to numerical: 2 types - NaN, not NaN -> Convert to NaN:0, not NaN:1
 
-
+Tuning strategy: we will be using random search first for hyperparameter tuning. After we have narrowed down the range of potential optimal parameters, we will use grid search to find the optimal parameters within the narrowed down range.
