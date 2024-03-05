@@ -18,6 +18,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from xgboost import XGBClassifier
 import matplotlib.patches as mpatches
+from sklearn.metrics import roc_curve, precision_recall_curve, auc
 
 
 # a helper function to examine the numerical features
@@ -593,6 +594,58 @@ def plot_threshold_precision_recall(y_true, y_pred_prob, title = 'Threshold-Prec
     plt.legend()
     plt.show()
     
+## plot roc and precision recall curve together 
+
+def plot_roc_pr_curves(y_true, y_pred_prob):
+    # Calculate ROC curve
+    fpr, tpr, thresholds_roc = roc_curve(y_true, y_pred_prob)
+    roc_auc = auc(fpr, tpr)
+
+    # Calculate Precision-Recall curve
+    precision, recall, thresholds_pr = precision_recall_curve(y_true, y_pred_prob)
+    pr_auc = auc(recall, precision)
+
+    idx = next(i for i, x in enumerate(fpr) if x >= 0.05)  # Find the index for FPR just over 5%
+    # Find the closest threshold in the PR curve to the one identified in the ROC curve analysis
+    roc_threshold = thresholds_roc[idx]
+    closest_threshold_index = np.argmin(np.abs(thresholds_pr - roc_threshold))
+    selected_precision = precision[closest_threshold_index]
+    selected_recall = recall[closest_threshold_index]
+
+    # Create a figure with two plots side by side
+    plt.figure(figsize=(14, 6))
+
+    # Plot ROC Curve
+    plt.subplot(1, 2, 1)
+    plt.plot(fpr, tpr, label=f'ROC curve (area = {roc_auc:.2f})')
+    plt.plot([0, 1], [0, 1], 'k--')  # Dashed diagonal
+    plt.plot(fpr[idx], tpr[idx], 'ro', label='~5% FPR')
+    plt.annotate(f'FPR ~5%\nTPR={tpr[idx]:.2f}', (fpr[idx], tpr[idx]), textcoords="offset points", xytext=(30,-10), ha='center')
+    plt.axvline(x=0.05, color='r', linestyle='--', label='5% FPR')  # Highlight the 5% FPR with a vertical line
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc="lower right")
+
+    # Plot PR Curve
+    plt.subplot(1, 2, 2)
+    plt.plot(recall, precision, label=f'PR curve (area = {pr_auc:.2f})')
+    plt.plot(selected_recall, selected_precision, 'ro')
+    plt.annotate(f'Threshold={roc_threshold:.2f}\nPrecision={selected_precision:.2f}\nRecall={selected_recall:.2f}',
+                 (selected_recall, selected_precision),
+                 textcoords="offset points",
+                 xytext=(-10,20),
+                 ha='center')
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve')
+    plt.legend(loc="lower left")
+    plt.tight_layout()
+    plt.show()
+
+# Example usage:
+# plot_roc_pr_curves(y_test, rf_pred_prob)
+
 ## Feature Importance
 
 ### 1. Logistic Regression Coefficients
