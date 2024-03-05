@@ -832,3 +832,15 @@ def pdp_plot_categorical(ax, X_train, var, sample_n, pipeline):
     ax.set_ylabel(var)
     ax.tick_params(axis='y', rotation=45)  # Rotate y-axis labels
     ax.grid(True)
+
+# Local Breakdown interaction
+
+
+def plot_local_breakdown_interactions(top_10_tp, pipeline_explainer):
+    for index, row in top_10_tp.iterrows():
+        local_breakdown_exp = pipeline_explainer.predict_parts(
+            top_10_tp.iloc[index],
+            type='break_down_interactions',
+            label=f"record:{index}, prob:{row['pred_proba']:.3f}")
+
+        local_breakdown_exp.plot()
