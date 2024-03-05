@@ -9,6 +9,15 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_a
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 import numpy as np
+from sklearn.metrics import precision_recall_curve
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import roc_curve, auc
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import StackingClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from xgboost import XGBClassifier
+import matplotlib.patches as mpatches
 
 
 # a helper function to examine the numerical features
@@ -466,3 +475,196 @@ def tune_xgb_gs(xgb_pipeline, X_resampled, y_resampled):
 
     return best_params
 
+## Stacking Classifier 
+def create_stacking_classifier(preprocessor):
+
+    # Define base estimators for the stacker
+    base_estimators = [
+        ('gbm', GradientBoostingClassifier(n_estimators=30, learning_rate=1.0, max_depth=3, random_state=42)),
+        ('xgb', XGBClassifier(ase_score=None, booster=None, callbacks=None,
+                     colsample_bylevel=None, colsample_bynode=None,
+                     colsample_bytree=0.8, device=None, early_stopping_rounds=None,
+                     enable_categorical=False, eval_metric=None, feature_types=None,
+                     gamma=2, grow_policy=None, importance_type=None,
+                     interaction_constraints=None, learning_rate=0.01, max_bin=None,
+                     max_cat_threshold=None, max_cat_to_onehot=None,
+                     max_delta_step=None, max_depth=12, max_leaves=None,
+                     min_child_weight=5, monotone_constraints=None)), 
+        ('rf', RandomForestClassifier(bootstrap=False, 
+                                      max_depth=40, 
+                                      min_samples_leaf=5,
+                                      min_samples_split=50, 
+                                      n_estimators=1100, 
+                                      random_state=0)),
+        ('lr', LogisticRegression(random_state=42))  
+    ]
+
+    # Final estimator on top
+    final_estimator = LogisticRegression()
+
+    # Create stacking classifier
+    stacking_classifier = StackingClassifier(
+        estimators=base_estimators,
+        final_estimator=final_estimator,
+        cv=3,
+        n_jobs=-1
+    )
+
+    # Create stacked pipeline
+    stacked_pipeline = Pipeline(steps=[('preprocessor', preprocessor),
+                                       ('classifier', stacking_classifier)])
+    
+    return stacked_pipeline
+
+# Metrics visualization 
+
+## 1. Confusion Matrix
+
+def plot_confusion_matrix(y_true, y_pred_prob, threshold, model_name):
+    """
+    Plot the confusion matrix at a given threshold.
+    
+    Parameters:
+    - y_true: The true target values.
+    - y_pred_prob: The predicted target values.
+    - threshold: The threshold to use for classification.
+    - model_name: The name of the model.
+
+    Returns:
+    - The confusion matrix.
+    """
+    y_pred = y_pred_prob > threshold
+
+    cm = confusion_matrix(y_true, y_pred)
+
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='g', cmap='Blues', cbar=False)
+    plt.title(f'Confusion Matrix at 5% FPR for {model_name}')
+    plt.xlabel('Predicted Label')
+    plt.ylabel('True Label')
+    plt.show()
+    
+## 2. ROC Curve 
+def plot_roc_curve(pred_prob, model_names, y_test):
+    for i, pred_prob in enumerate(pred_prob):
+
+        # Calculate the ROC curve
+        fpr, tpr, _ = roc_curve(y_test, pred_prob)
+        roc_auc = auc(fpr, tpr)
+
+        # Plot the ROC curve
+        plt.plot(fpr, tpr, label=f'{model_names[i]} (AUC: {roc_auc:.2f})')
+
+    # Plot the diagonal line
+    plt.plot([0, 1], [0, 1], color='navy', linestyle='--')
+
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.title('Receiver Operating Characteristic')
+    plt.legend(loc="lower right")
+    plt.show()
+
+
+## Precision Recall Curve 
+
+def plot_threshold_precision_recall(y_true, y_pred_prob, title = 'Threshold-Precision-Recall Curve'):
+    """
+    Plot the relationship between the threshold and precision, and threshold and recall.
+    
+    Parameters:
+    - y_true: The true target values.
+    - y_pred_prob: The predicted target values.
+
+    Returns:
+    - The threshold-precision-recall curve.
+    """
+    thresholds = np.linspace(0, 1, 100)
+    precisions = [precision_score(y_true, y_pred_prob > t) for t in thresholds]
+    recalls = [recall_score(y_true, y_pred_prob > t) for t in thresholds]
+
+    plt.figure(figsize=(8, 6))
+    plt.plot(thresholds, precisions, marker='o', linestyle='--', color='blue', label='Precision')
+    plt.plot(thresholds, recalls, marker='o', linestyle='--', color='orange', label='Recall')
+    plt.title(title)
+    plt.xlabel('Threshold')
+    plt.ylabel('Score')
+    plt.legend()
+    plt.show()
+    
+## Feature Importance
+
+### 1. Logistic Regression Coefficients
+
+def plot_lr_fi(lr_pipeline):
+    # Get feature names
+    feature_names = lr_pipeline.named_steps['preprocessor'].get_feature_names_out()
+
+    # Get feature importance coefficients
+    feature_importance = lr_pipeline.named_steps['classifier'].coef_
+
+    # Create DataFrame for feature importance
+    feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': feature_importance[0]})
+
+    # Calculate absolute importance
+    feature_importance_df['abs_importance'] = feature_importance_df['importance'].abs()
+
+    # Sort DataFrame by absolute importance
+    feature_importance_df = feature_importance_df.sort_values('abs_importance', ascending=False)
+
+    # Create binary column for positive/negative importance
+    feature_importance_df['positive'] = feature_importance_df['importance'] > 0
+
+    # Remove prefix from feature names
+    feature_importance_df['feature'] = feature_importance_df['feature'].str.replace('num__', '')
+    feature_importance_df['feature'] = feature_importance_df['feature'].str.replace('cat__', '')
+
+    # Plot feature importance for Logistic Regression
+    plt.figure(figsize=(10, 6))
+    plt.title('Top 10 Features Coefficients in Logistic Regression')
+
+    # Create list of colors based on sign of coefficients
+    colors = ['green' if x >= 0 else 'red' for x in feature_importance_df['importance'][:10]]
+
+    # Create horizontal bar plot
+    plt.barh(feature_importance_df['feature'][:10], feature_importance_df['abs_importance'][:10], color=colors)
+    plt.xlabel('Absolute Coefficient')
+    plt.ylabel('Feature')
+    plt.gca().invert_yaxis()
+
+    # Create legend
+    red_patch = mpatches.Patch(color='red', label='Negative Values')
+    green_patch = mpatches.Patch(color='green', label='Positive Values')
+    plt.legend(handles=[red_patch, green_patch])
+
+    plt.show()
+    
+
+### 2. Random Forest Feature Importance
+def plot_tree_fi(rf_pipeline):
+    # Get feature names
+    feature_names = rf_pipeline.named_steps['preprocessor'].get_feature_names_out()
+
+    # Get feature importance
+    feature_importance = rf_pipeline.named_steps['classifier'].feature_importances_
+
+    # Create DataFrame for feature importance
+    feature_importance_df = pd.DataFrame({'feature': feature_names, 'importance': feature_importance})
+
+    # Sort DataFrame by importance
+    feature_importance_df = feature_importance_df.sort_values('importance', ascending=False)
+
+    # Plot feature importance for Random Forest
+    plt.figure(figsize=(10, 6))
+    plt.title('Top 10 Features Importance in Random Forest')
+
+    # Create horizontal bar plot
+    plt.barh(feature_importance_df['feature'][:10], feature_importance_df['importance'][:10], color='skyblue')
+    plt.xlabel('Importance')
+    plt.ylabel('Feature')
+    plt.gca().invert_yaxis()
+
+    plt.show()
+
+ 
