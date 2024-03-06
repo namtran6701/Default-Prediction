@@ -764,7 +764,7 @@ def plot_lr_fi(lr_pipeline):
 
 
 # 2. Random Forest Feature Importance
-def plot_tree_fi(rf_pipeline):
+def plot_tree_fi(rf_pipeline, title='Top 10 Features Importance in Random Forest'):
     # Get feature names
     feature_names = rf_pipeline.named_steps['preprocessor'].get_feature_names_out(
     )
@@ -782,7 +782,7 @@ def plot_tree_fi(rf_pipeline):
 
     # Plot feature importance for Random Forest
     plt.figure(figsize=(10, 6))
-    plt.title('Top 10 Features Importance in Random Forest')
+    plt.title(title)
 
     # Create horizontal bar plot
     plt.barh(feature_importance_df['feature'][:10],
