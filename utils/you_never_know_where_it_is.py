@@ -40,7 +40,8 @@ def analyze_numerical(df, features):
                 col = features[i]
                 # Plotting on the subplot axes
                 sns.histplot(data=df, x=col, kde=True, ax=axes[i])
-                axes[i].set_title(f"Distribution of {col}")
+                title = axes[i].set_title(f"Distribution of {col}")
+                title.set_size(20)  # Increase the title size
             else:
                 # Remove axis for empty plots
                 fig.delaxes(axes[i])
@@ -48,8 +49,9 @@ def analyze_numerical(df, features):
         plt.tight_layout()
         plt.show()
 
-
 # a helper function to examine low cardinality categorical features
+
+
 def visualize_categorical(X_train, low_cardinality, figsize=(20, 10)):
     # Calculate the number of rows needed for subplots
     n_rows = len(low_cardinality) // 2
