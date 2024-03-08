@@ -5,7 +5,7 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
+from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score, f1_score
 from sklearn.model_selection import RandomizedSearchCV
 from sklearn.model_selection import GridSearchCV
 import numpy as np
@@ -705,6 +705,44 @@ def plot_roc_pr_curves(y_true, y_pred_prob, fpr_percentile):
     plt.legend(loc="lower left")
     plt.tight_layout()
     plt.show()
+
+# operating table for false positive rate metrics
+
+
+def operating_tbl_metrics(xgb_model, X_test, y_test, y_pred_prob):
+    # Make predictions
+    y_pred_prob = y_pred_prob
+
+    # Calculate FPR, TPR, and thresholds
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_prob)
+
+    desired_fprs = [i/100 for i in range(1, 7)]  # 1% to 6%
+    metrics = []
+
+    for desired_fpr in desired_fprs:
+        # Find the threshold closest to the desired FPR
+        idx = np.argmin(np.abs(fpr - desired_fpr))
+        threshold = thresholds[idx]
+
+        # Convert probabilities to binary predictions using threshold
+        y_pred = (y_pred_prob >= threshold).astype('int')
+
+        # Calculate metrics
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        roc_auc = roc_auc_score(y_test, y_pred)
+
+        # Add to list
+        metrics.append([fpr[idx], threshold, accuracy,
+                       precision, recall, f1, roc_auc])
+
+    # Convert to DataFrame
+    metrics_df = pd.DataFrame(metrics, columns=[
+                              'FPR', 'Threshold', 'Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC'])
+
+    return metrics_df
 
 # Feature Importance
 
