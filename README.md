@@ -1,4 +1,4 @@
-# Project Title: Loan Default Prediction (Further Details in reports folder)
+# Project Title: Loan Default Prediction (Further details in reports folder)
 
 ## Problem Statement
 
