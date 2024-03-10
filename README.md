@@ -25,8 +25,8 @@ In the heavily regulated financial industry, accurate and explainable loan defau
 
 ### Model Development
 
-- Train and compare the performance of various models, including Logistic Regression, Random Forest, GBM/XGBoost, Neural Network, and ensemble models.
-- Explore hyperparameter tuning techniques such as grid search, randomized search, and Bayesian optimization for model optimization.
+- Train and compare the performance of various models, including Logistic Regression, Random Forest, GBM/XGBoost, Neural Network, and ensemble models (GBM, XGBoost, Logistic, Random Forest).
+- Explore hyperparameter tuning techniques such as grid search, randomized search for model optimization.
 
 ### Model Explainability
 
