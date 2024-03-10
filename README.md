@@ -1,40 +1,38 @@
-if missing vals is less than 1 percent, drop 
-5->10% impute with median, mode
-more than that, consider dropping the cols
+# Project Title: Loan Default Prediction (Further Details in reports folder)
 
-Categorical notes: 
-term: two terms only - 36 and 60 months -> Convert to 36:0, 60:1
+## Problem Statement
 
-grade: 7 grades - A to G -> Convert to A:0, B:1, C:2, D:3, E:4, F:5, G:6
+In the heavily regulated financial industry, accurate and explainable loan default prediction models are crucial for ensuring financial stability and minimizing risk. This project focuses on building, comparing, and critically explaining various machine learning models for predicting loan defaults, with an emphasis on regulatory compliance and ethical decision-making.
 
-sub_grade: 35 subgrades - A1 to G5 -> Convert to A1:0, A2:1, A3:2, A4:3, A5:4, B1:5, B2:6, B3:7, B4:8, B5:9, C1:10, C2:11, C3:12, C4:13, C5:14, D1:15, D2:16, D3:17, D4:18, D5:19, E1:20, E2:21, E3:22, E4:23, E5:24, F1:25, F2:26, F3:27, F4:28, F5:29, G1:30, G2:31, G3:32, G4:33, G5:34
+## Objectives
 
-d: 6 types - MORTGAGE, RENT, OWN, OTHER, NONE, ANY -> Convert to MORTGAGE:0, RENT:1, OWN:2, OTHER:3, NONE:4, ANY:5
+1. **Develop Robust Models**: Experiment with a range of machine learning algorithms including Logistic Regression, Random Forest, Gradient Boosting (GBM or XGBoost), Neural Networks, and ensemble methods (e.g., StackingClassifier, AutoGluon).
 
-verification_status: 3 types - Not Verified, Source Verified, Verified -> Convert to Not Verified:0, Source Verified:1, Verified:2
+2. **Rigorous Evaluation**: Evaluate model performance using metrics such as accuracy, precision, recall, F1-score, ROC-AUC, and Precision-Recall curves.
 
-addr_state: 51 states -> Convert to 51 columns with 1s and 0s
+3. **Prioritize Explainability**: Utilize techniques like LIME, SHAP, feature importance, and partial dependence plots to understand model reasoning and ensure compliance.
 
-pymnt_plan: 2 types - n, y -> Convert to n:0, y:1
+4. **Operationalize Insights**: Propose thresholds aligned with desired false positive rates (2% and 5%) with clear implications for precision, recall, and business outcomes.
 
-initial_list_status: 2 types - f, w -> Convert to f:0, w:1
+5. **Thorough Documentation**: Provide a well-structured report outlining methodology, results, and actionable recommendations.
 
-Numerical notes: 
+## Methodology
 
-emp_length: 11 types - less than 1 year, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10+ -> Convert to 0:less than 1 year, 1:1, 2:2, 3:3, 4:4, 5:5, 6:6, 7:7, 8:8, 9:9, 10+:10
+### Data Exploration and Preprocessing
 
-int_rate - convert to float
+- Conduct Exploratory Data Analysis (EDA) to gain insights into data distribution, missing values, and outliers.
+- Clean and prepare data, including addressing missing values, handling categorical features, and potential normalization or scaling.
 
-revol_util - convert to float
+### Model Development
 
-earliest_cr_line - convert to number of months from earliest credit line to the date of loan application
+- Train and compare the performance of various models, including Logistic Regression, Random Forest, GBM/XGBoost, Neural Network, and ensemble models.
+- Explore hyperparameter tuning techniques such as grid search, randomized search, and Bayesian optimization for model optimization.
 
-last_pymnt_d - convert to number of months from last payment date to the date of loan application
+### Model Explainability
 
-last_credit_pull_d - convert to number of months from last credit pull date to the date of loan application
+- Generate global explanations such as feature importance rankings and partial dependence plots to understand the model's overall logic.
+- Produce local explanations by analyzing individual predictions (top true positives, false positives, false negatives) to pinpoint patterns in decision-making.
 
-issue_d - convert to number of months from issue date to the date of loan application
+### Operational Strategy
 
-desc - convert desc to numerical: 2 types - NaN, not NaN -> Convert to NaN:0, not NaN:1
-
-Tuning strategy: we will be using random search first for hyperparameter tuning. After we have narrowed down the range of potential optimal parameters, we will use grid search to find the optimal parameters within the narrowed down range.
+- Align model thresholds with business goals, recommending strategies to achieve specific false positive rates while discussing precision and recall trade-offs.
